@@ -1,15 +1,3 @@
-"""
-Functions to generate suggested start and end times for field visits and
-flag records requiring manual checks.
-
-This module encapsulates the logic for deriving a suggested start and
-end time for each field visit based on project codes, day parts and
-astronomical sunrise/sunset times.  It also provides a helper to flag
-records where additional review is necessary.  By splitting these
-utilities into a separate file, scripts that wish to suggest times or
-flag anomalies can import just what they need without pulling in
-higher‑level field visit processing code.
-"""
 
 from __future__ import annotations
 
@@ -21,36 +9,13 @@ import numpy as np
 import pandas as pd
 
 try:
-    # Try relative import when part of a package
-    from .fieldvisit_utils import parse_local, to_local  # type: ignore
+    from .fieldvisit_utils import parse_local, to_local
 except Exception:
-    # Fallback to absolute import when running as a standalone script
-    from fieldvisit_utils import parse_local, to_local  # type: ignore
+    from fieldvisit_utils import parse_local, to_local
 
 
 def _extract_project_and_daypart(name: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
-    """Extract a project code and day part (morning/evening) from a name.
 
-    The original implementation used a separate function to clean and
-    normalise field visit names.  Since that function has been removed,
-    this helper replicates only the portions needed by the time
-    suggestion logic.  Project codes consist of patterns like VM01,
-    VM02, VM03, GZ, ZR, HM or Uitvliegtelling (case insensitive) and
-    can include separators like hyphens or spaces.  Day parts are
-    either ``ochtend`` (morning) or ``avond`` (evening) optionally
-    followed by a number or Roman numeral (I, II, III).
-
-    Parameters
-    ----------
-    name : Optional[str]
-        The raw field visit name to parse.
-
-    Returns
-    -------
-    Tuple[Optional[str], Optional[str]]
-        The normalised project code and day part.  If nothing can be
-        extracted, ``None`` is returned for that element.
-    """
     if not isinstance(name, str) or not name:
         return (None, None)
     name_lower = name.lower()
@@ -59,20 +24,19 @@ def _extract_project_and_daypart(name: Optional[str]) -> Tuple[Optional[str], Op
     project = None
     if match:
         project = match.group(1).upper().replace(" ", "").replace("-", "")
-        # normalise VM single digit codes to have a leading zero (e.g. VM1 -> VM01)
+        # normalise VM single digit codes to have a leading zero
         m2 = re.match(r"VM(\d)$", project, re.IGNORECASE)
         if m2:
             project = f"VM0{m2.group(1)}"
-        # Convert WM prefix to VM
         if project.startswith("WM"):
             project = project.replace("WM", "VM", 1)
-    # Extract day part
+    # Extract day part thingy
     dagdeel_match = re.search(r"\b(avond|ochtend)\s*([0-9]+|I{1,3})?", name_lower, re.IGNORECASE)
     dagdeel = None
     if dagdeel_match:
         t = dagdeel_match.group(1).lower()
         n_raw = dagdeel_match.group(2)
-        # normalise numerals (roman or integer)
+        # normalise numerals
         n_norm = None
         if n_raw:
             roman_map = {"i": "1", "ii": "2", "iii": "3"}
@@ -92,35 +56,7 @@ def _extract_project_and_daypart(name: Optional[str]) -> Tuple[Optional[str], Op
 
 
 def get_fieldvisit_time_suggest(df: pd.DataFrame) -> pd.DataFrame:
-    """Suggest start and end times for field visits based on project/daypart.
 
-    This function computes suggested start and end times for each
-    observation in ``df``.  It first parses the raw start and end
-    datetimes into timezone aware values using :func:`parse_local`.
-    The sunrise and sunset columns (if present) are converted to local
-    time using :func:`to_local`.  The project code and day part are
-    extracted from the ``Naam`` column on the fly, so no separate
-    cleaning step is required.
-
-    The adjustment rules mirror those from the original
-    ``get_fieldvisit_timesuggest`` function but will gracefully skip
-    adjustments if the project or day part cannot be determined.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        Input table containing at minimum the following columns:
-        ``Startdatum``, ``Einddatum``, ``Naam`` and optionally
-        ``sunrise`` and ``sunset``.  Extra columns are preserved.
-
-    Returns
-    -------
-    pandas.DataFrame
-        A new DataFrame with additional columns:
-        ``Starttijd_Suggest``, ``Eindtijd_Suggest``, ``duur_suggest``,
-        ``Project`` and ``Dagdeel``.  The original columns are
-        untouched.
-    """
     df = df.copy()
     # Parse local datetimes
     df["Starttijd_Suggest"] = df.get("Startdatum").apply(parse_local)
@@ -153,7 +89,7 @@ def get_fieldvisit_time_suggest(df: pd.DataFrame) -> pd.DataFrame:
         sunrise_local: Optional[datetime] = row.get("sunrise_local")
         sunset_local: Optional[datetime] = row.get("sunset_local")
 
-        # Helper to update a datetime's time components
+
         def update_time(dt: datetime, hour: int, minute: int, second: int = 0) -> datetime:
             return dt.replace(hour=hour, minute=minute, second=second)
 
@@ -237,30 +173,7 @@ def get_fieldvisit_time_suggest(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def flag_fieldtime_changes(df: pd.DataFrame) -> pd.DataFrame:
-    """Flag field visits that may require manual data checks.
 
-    A record will be marked for checking if:
-
-      * The project code starts with "VM03" (case insensitive).
-      * Either sunrise or sunset is missing (NaT/NaN).
-      * The cleaned name (if available) is missing or empty.  If the
-        ``Naam_schoon`` column is absent, the raw ``Naam`` is used instead.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        A DataFrame produced by :func:`get_fieldvisit_time_suggest` or
-        another source containing at least the columns ``Project``,
-        ``sunrise`` and ``sunset``.  Optional columns ``Naam`` and
-        ``Naam_schoon`` will be inspected for missing values.
-
-    Returns
-    -------
-    pandas.DataFrame
-        The input DataFrame with an additional column ``check_data``
-        containing "yes" if manual review is suggested and "no"
-        otherwise.
-    """
     df = df.copy()
     # Determine which name column to inspect for emptiness
     if "Naam_schoon" in df.columns:
@@ -268,7 +181,7 @@ def flag_fieldtime_changes(df: pd.DataFrame) -> pd.DataFrame:
     elif "Naam" in df.columns:
         name_col_to_check = "Naam"
     else:
-        # If neither column exists, create an empty string series to avoid errors
+        # If neither column exists, create an empty string
         df["_tmp_name"] = ""
         name_col_to_check = "_tmp_name"
 
