@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, time, date
 import pytz
 
 try:
-    from fieldvisit_utils import TIMEZONE  # type: ignore
+    from fieldvisit_utils import TIMEZONE
 except Exception:
     # Fallback timezone
     TIMEZONE = pytz.timezone("Europe/Amsterdam")
@@ -40,7 +40,7 @@ def parse_local(dt: Any, tz: pytz.BaseTzInfo = TIMEZONE) -> Optional[datetime]:
 
 
 def to_local(dt: Any, tz: pytz.BaseTzInfo = TIMEZONE) -> Optional[datetime]:
-    #Convert a timestamp to the given timezone
+    ##Convert a timestamp to the given timezone
     if isinstance(dt, pd.Timestamp):
         dt = dt.to_pydatetime()
 
