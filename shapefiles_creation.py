@@ -105,7 +105,7 @@ def create_gis_outputs(csv_path: str,
 
         gdf_rd = gdf_wgs.to_crs("EPSG:28992")
 
-        # Prepare shapefile safe copy: convert datetime/timedelta
+        # Prepare shapefile safe copy
         shp_ready = gdf_rd.copy()
         for col in shp_ready.columns:
             if pd.api.types.is_datetime64_any_dtype(shp_ready[col]):
