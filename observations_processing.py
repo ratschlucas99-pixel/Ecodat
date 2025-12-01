@@ -40,9 +40,9 @@ def fill_missing_counts(df: pd.DataFrame, count_col: str = "Aantal") -> pd.DataF
     return df
 
 
-def reverse_geocode(*args, **kwargs):  # type: ignore[override]
+def reverse_geocode(*args, **kwargs):
 
-    return geocode_reverse_geocode(*args, **kwargs)  # type: ignore
+    return geocode_reverse_geocode(*args, **kwargs)
 
 
 def assign_functions(df: pd.DataFrame,
@@ -125,9 +125,9 @@ def assign_functions(df: pd.DataFrame,
     return df
 
 
-def parse_address(*args, **kwargs):  # type: ignore[override]
+def parse_address(*args, **kwargs):
 
-    return geocode_parse_address(*args, **kwargs)  # type: ignore
+    return geocode_parse_address(*args, **kwargs)
 
 
 def transform_data(raw_df: pd.DataFrame,
@@ -170,7 +170,7 @@ def transform_data(raw_df: pd.DataFrame,
 
     df = assign_functions(df)
 
-    # Assign Verblijfnummer (unique ID per address)
+    # Assign ID per address
     codes, uniques = pd.factorize(df["address"], sort=True)
     df["Verblijfnummer"] = codes.astype(float) + 1
     df.loc[df["address"].isna(), "Verblijfnummer"] = np.nan
